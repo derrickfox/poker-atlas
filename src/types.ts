@@ -121,6 +121,8 @@ export interface Variant {
   customTutorial?: TutorialStep[];
   /** Extra variant-specific quiz questions layered on top of the generated drills. */
   quiz?: QuizQuestion[];
+  /** Selects an isolated practice rules engine when the normal street engine does not apply. */
+  practiceMode?: "street" | "house";
 }
 
 /* ---------------------------------------------------------------- tutorial script */
@@ -155,6 +157,8 @@ export interface TableSeat {
   badge?: string;
   active?: boolean;
   won?: number;
+  /** Dealer/house seats have no finite chip stack to display. */
+  hideStack?: boolean;
 }
 
 export interface TableState {

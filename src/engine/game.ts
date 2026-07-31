@@ -43,6 +43,33 @@ export interface Settlement {
   summary: string;
 }
 
+/**
+ * AI_CHANGE:
+ * Tool: Codex
+ * Model: GPT-5
+ * Timestamp: 2026-07-31T09:00:00-04:00
+ * Purpose: Returns every card used by a winning high or low hand at a contested showdown.
+ * Reason: The practice table can now lift the evaluator-selected combination instead of making
+ *         beginners infer which private and shared cards produced the winning hand.
+ */
+export function winningCardIds(settlement?: Settlement): Set<string> {
+  const ids = new Set<string>();
+  // When everyone else folds there is no winning card combination to teach.
+  if (!settlement || settlement.perPlayer.length < 2) return ids;
+
+  const hiWinners = new Set(settlement.hiWinners);
+  const loWinners = new Set(settlement.loWinners);
+  for (const entry of settlement.perPlayer) {
+    if (hiWinners.has(entry.index) && entry.hi?.qualifies) {
+      entry.hi.cards.forEach((card) => ids.add(card.id));
+    }
+    if (loWinners.has(entry.index) && entry.lo?.qualifies) {
+      entry.lo.cards.forEach((card) => ids.add(card.id));
+    }
+  }
+  return ids;
+}
+
 export interface Game {
   variant: Variant;
   deck: Card[];

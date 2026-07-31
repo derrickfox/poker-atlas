@@ -51,11 +51,13 @@ src/
     tutorial.ts             deals a demo hand and emits a tutorial script
     table.ts                reduces script actions into TableState
     game.ts                 the playable engine (deal, bet, draw, settle)
+    house.ts                isolated dealer-game rules and payout engine
     drills.ts               generates practice questions
   components/
     PokerTable.tsx          renders TableState; cards animate via CSS transforms
     TutorialPlayer.tsx      script playback with autoplay and a step rail
-    Practice.tsx            drills + live hand
+    Practice.tsx            drills + practice-mode routing
+    HousePractice.tsx       animated dealer-game practice
     Dashboard.tsx           catalog and filters
 ```
 
@@ -82,8 +84,9 @@ Two ideas carry most of the weight:
 - **Mixed rotations** — HORSE, 8-Game
 - **Against the house** — Three Card Poker, Ultimate Texas Hold'em, Caribbean Stud, Let It Ride
 
-Every variant has an animated tutorial and drills. The 22 that fit the deal-and-bet model are also
-playable against bots; the rest say so and lean on the walkthrough.
+Every variant has an animated tutorial and drills. The 22 that fit the deal-and-bet model are
+playable against bots; Three Card Poker and Caribbean Stud also have isolated dealer-game practice
+modes. The remaining variants say so and lean on the walkthrough.
 
 ## Caveats
 

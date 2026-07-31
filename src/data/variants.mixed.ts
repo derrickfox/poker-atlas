@@ -201,6 +201,13 @@ export const mixedVariants: Variant[] = [
   },
 ];
 
+// AI_CHANGE:
+// Tool: Codex
+// Model: GPT-5
+// Timestamp: 2026-07-31T10:15:00-04:00
+// Purpose: Enables isolated practice engines for Three Card Poker and Caribbean Stud.
+// Reason: These one-decision dealer games are the safest first increment toward playable coverage
+//         for all variants because they do not modify the established street-game engine.
 export const houseVariants: Variant[] = [
   {
     id: "three-card-poker",
@@ -238,7 +245,8 @@ export const houseVariants: Variant[] = [
       "The complete optimal strategy is one line: play Q-6-4 or better, fold everything else.",
       "The house edge is roughly 3.4% on the ante-play bet — treat it as entertainment, not income.",
     ],
-    playable: false,
+    playable: true,
+    practiceMode: "house",
     customTutorial: [
       {
         id: "intro",
@@ -430,7 +438,8 @@ export const houseVariants: Variant[] = [
       "Raise with any pair or better; fold anything below ace-king high.",
       "With exactly ace-king, raise if the dealer's upcard matches one of your cards or is lower than your fourth-highest card.",
     ],
-    playable: false,
+    playable: true,
+    practiceMode: "house",
     customTutorial: [
       {
         id: "intro",

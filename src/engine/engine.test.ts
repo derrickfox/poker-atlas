@@ -29,7 +29,16 @@ import {
   legalActions,
   newGame,
   newGameFrames,
+  winningCardIds,
 } from "./game";
+import {
+  houseActionFrames,
+  houseGameToTable,
+  newHouseGame,
+  resolveHouseRound,
+  scoreThreeCard,
+  threeCardDealerQualifies,
+} from "./house";
 import { variants } from "../data";
 
 const FREE = { useHole: null, useBoard: null, handSize: 5 };
@@ -112,6 +121,31 @@ describe("hand selection", () => {
     expect(bestHi(twoSpades, board, "high", omaha).value[0]).toBe(5);
   });
 
+  it("identifies the exact private and shared cards in an Omaha winning combination", () => {
+    const board = parseCards("As Ks 9s 7d 2c");
+    const winnerCards = parseCards("Qs Js 8h 6d");
+    const loserCards = parseCards("Ah Kd 4c 3c");
+    const omaha = { useHole: 2, useBoard: 3, handSize: 5 };
+    const winner = bestHi(winnerCards, board, "high", omaha);
+    const loser = bestHi(loserCards, board, "high", omaha);
+    const ids = winningCardIds({
+      hiWinners: [0],
+      loWinners: [],
+      hiScore: winner,
+      loScore: null,
+      perPlayer: [
+        { index: 0, hi: winner, lo: null },
+        { index: 1, hi: loser, lo: null },
+      ],
+      awards: [{ index: 0, amount: 16 }],
+      summary: "You win with a flush.",
+    });
+
+    expect(ids).toEqual(new Set(winner.cards.map((card) => card.id)));
+    expect(winner.cards.filter((card) => winnerCards.some((hole) => hole.id === card.id))).toHaveLength(2);
+    expect(winner.cards.filter((card) => board.some((shared) => shared.id === card.id))).toHaveLength(3);
+  });
+
   it("lets a single hole card play in Hold'em", () => {
     const board = parseCards("As Ks 9s 4s 2c");
     const oneSpade = parseCards("Qs Jh");
@@ -123,6 +157,91 @@ describe("hand selection", () => {
     const hand = parseCards("As 2s 3h 4d");
     const omaha = { useHole: 2, useBoard: 3, handSize: 5 };
     expect(bestLo(hand, board, "a5-8ob", omaha).qualifies).toBe(false);
+  });
+});
+
+describe("dealer-banked practice", () => {
+  it("uses the official Three Card Poker ranking order and queen-high qualification", () => {
+    const straightFlush = scoreThreeCard(parseCards("Qs Js Ts"));
+    const trips = scoreThreeCard(parseCards("9s 9h 9d"));
+    const straight = scoreThreeCard(parseCards("8s 7h 6d"));
+    const flush = scoreThreeCard(parseCards("As 8s 4s"));
+    const pair = scoreThreeCard(parseCards("Ks Kh 2d"));
+    expect(compareScores(straightFlush, trips)).toBe(1);
+    expect(compareScores(trips, straight)).toBe(1);
+    expect(compareScores(straight, flush)).toBe(1);
+    expect(compareScores(flush, pair)).toBe(1);
+    expect(threeCardDealerQualifies(scoreThreeCard(parseCards("Qs 6h 4d")))).toBe(true);
+    expect(threeCardDealerQualifies(scoreThreeCard(parseCards("Js Th 8d")))).toBe(false);
+  });
+
+  it("settles Three Card Poker qualification, wins, folds and ante bonuses exactly", () => {
+    const pairWin = resolveHouseRound(
+      "three-card-poker",
+      parseCards("As Ah 2d"),
+      parseCards("Ks Qh 9d"),
+      "play",
+    );
+    const straightBonus = resolveHouseRound(
+      "three-card-poker",
+      parseCards("6s 5h 4d"),
+      parseCards("Ks Qh 9d"),
+      "play",
+    );
+    const dealerMisses = resolveHouseRound(
+      "three-card-poker",
+      parseCards("7s 5h 2d"),
+      parseCards("Js Th 8d"),
+      "play",
+    );
+    const folded = resolveHouseRound(
+      "three-card-poker",
+      parseCards("7s 5h 2d"),
+      parseCards("As Ah 8d"),
+      "fold",
+    );
+    expect(pairWin.net).toBe(20);
+    expect(straightBonus.net).toBe(30);
+    expect(dealerMisses.net).toBe(10);
+    expect(folded.net).toBe(-10);
+  });
+
+  it("settles Caribbean Stud qualification and the raise payout ladder", () => {
+    const pairWin = resolveHouseRound(
+      "caribbean-stud",
+      parseCards("As Ah 9d 5c 2s"),
+      parseCards("Ad Kh Qs 8c 3d"),
+      "play",
+    );
+    const royalWin = resolveHouseRound(
+      "caribbean-stud",
+      parseCards("As Ks Qs Js Ts"),
+      parseCards("9d 9c 8s 5h 2d"),
+      "play",
+    );
+    const dealerMisses = resolveHouseRound(
+      "caribbean-stud",
+      parseCards("7s 6h 5d 3c 2s"),
+      parseCards("Ad Qh Js 8c 3d"),
+      "play",
+    );
+    expect(pairWin.net).toBe(30);
+    expect(royalWin.net).toBe(2010);
+    expect(dealerMisses.net).toBe(10);
+  });
+
+  it("separates the house-game wager, reveal and award into visible frames", () => {
+    for (const id of ["three-card-poker", "caribbean-stud"] as const) {
+      const game = newHouseGame(id, 71);
+      const frames = houseActionFrames(game, "play");
+      expect(frames.map((frame) => frame.stage)).toEqual(["decision", "reveal", "done"]);
+      expect(frames[0].wager).toBeGreaterThan(game.wager);
+      expect(frames[1].outcome).toBeUndefined();
+      expect(frames[2].outcome).toBeTruthy();
+      const table = houseGameToTable(frames[2]);
+      const emphasized = table.cards.filter((card) => card.emphasis === "play");
+      expect(emphasized.length === 0 || emphasized.length === game.hero.length).toBe(true);
+    }
   });
 });
 
@@ -218,7 +337,7 @@ describe("practice engine", () => {
   }
 
   it("plays every playable variant to a settled showdown", () => {
-    const playable = variants.filter((v) => v.playable);
+    const playable = variants.filter((v) => v.playable && v.practiceMode !== "house");
     expect(playable.length).toBeGreaterThan(15);
 
     for (const variant of playable) {
@@ -234,7 +353,7 @@ describe("practice engine", () => {
   });
 
   it("never deals a duplicate card during a hand", () => {
-    for (const variant of variants.filter((v) => v.playable)) {
+    for (const variant of variants.filter((v) => v.playable && v.practiceMode !== "house")) {
       const rng = makeRng(42);
       const finished = autoPlay(newGame(variant, 4, 12345), rng);
       const dealt = [...finished.players.flatMap((p) => p.cards), ...finished.board].map((c) => c.id);

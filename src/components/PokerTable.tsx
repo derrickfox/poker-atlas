@@ -342,10 +342,12 @@ export function PokerTable({ state, feltMark }: { state: TableState; feltMark?: 
                     {seat.name}
                     {seat.badge ? <em className="badge">{seat.badge}</em> : null}
                   </span>
-                  <span className="stack" key={seat.stack}>
-                    <ChipStack amount={seat.stack} size={14} row />
-                    {seat.stack}
-                  </span>
+                  {!seat.hideStack ? (
+                    <span className="stack" key={seat.stack}>
+                      <ChipStack amount={seat.stack} size={14} row />
+                      {seat.stack}
+                    </span>
+                  ) : null}
                 </div>
                 {seat.won ? (
                   <span className="won">+{seat.won}</span>
@@ -379,7 +381,15 @@ export function PokerTable({ state, feltMark }: { state: TableState; feltMark?: 
           const place = places.get(card.id);
           const isFresh = !known.current.has(card.id);
           const x = isFresh ? DECK.x : (place?.x ?? DECK.x);
-          const y = isFresh ? DECK.y : (place?.y ?? DECK.y);
+          // AI_CHANGE:
+          // Tool: Codex
+          // Model: GPT-5
+          // Timestamp: 2026-07-31T09:00:00-04:00
+          // Purpose: Winning cards move upward as the evaluator marks them for emphasis.
+          // Reason: A physical lift plus the existing glow makes the exact winning combination
+          //         readable at a glance, especially when Omaha leaves two private cards unused.
+          const winningLift = card.emphasis === "play" && !isFresh ? 18 : 0;
+          const y = isFresh ? DECK.y : (place?.y ?? DECK.y) - winningLift;
           const rot = isFresh ? 0 : (place?.rot ?? 0);
           const emphasis = card.emphasis === "play" ? " play" : card.emphasis === "dim" ? " dim" : "";
           const halfW = place?.hero ? 31 : 27;
@@ -393,7 +403,7 @@ export function PokerTable({ state, feltMark }: { state: TableState; feltMark?: 
               style={{
                 left: 0,
                 top: 0,
-                zIndex: 10 + index,
+                zIndex: (card.emphasis === "play" ? 110 : 10) + index,
                 transform: `translate(${x - halfW}px, ${y - halfH}px) rotate(${rot}deg)`,
                 transitionDelay: isFresh ? "0ms" : `${delay}ms`,
               }}
