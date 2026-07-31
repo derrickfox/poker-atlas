@@ -20,7 +20,7 @@ reads the launch config from the primary working directory).
 
 ```bash
 npm run dev        # vite, port 5194, strictPort
-npm test           # vitest, 32 tests
+npm test           # vitest, 37 tests
 npm run typecheck  # tsc --noEmit
 npm run build      # tsc --noEmit && vite build
 ```
@@ -85,8 +85,9 @@ src/
     game.ts                     the peer-poker engine (deal, bet, draw, settle)
     house.ts                    isolated dealer qualification, ranking and payout rules
     letItRide.ts                isolated withdrawals and standard main-wager paytable
+    ultimateHoldem.ts           isolated Play windows, qualification and Blind paytable
     drills.ts                   generates practice questions
-    engine.test.ts              32 tests
+    engine.test.ts              37 tests
 
   components/
     PokerTable.tsx              renders TableState — seats, cards, chips, pot
@@ -94,6 +95,7 @@ src/
     Practice.tsx                drills + practice-mode routing (contains gameToTable)
     HousePractice.tsx           animated dealer-game practice surface
     LetItRidePractice.tsx       animated two-decision Let It Ride practice surface
+    UltimateHoldemPractice.tsx  animated three-window Ultimate Hold'em practice surface
     Dashboard.tsx               catalog grid + filter rail
     VariantPage.tsx             header, tab strip, reference tab
     ErrorBoundary.tsx           per-tab crash isolation
@@ -136,7 +138,7 @@ are no cycles.
 | `origin?` | string | |
 | `showdownCaveat?` | string | appended to generated showdown narration (Badacey/Badeucey only) |
 | `playable` | boolean | true ⇒ a practice engine can deal it |
-| `practiceMode?` | `street \| house \| let-it-ride` | selects the isolated practice rules engine |
+| `practiceMode?` | `street \| house \| let-it-ride \| ultimate-holdem` | selects the isolated practice rules engine |
 | `customTutorial?` | `TutorialStep[]` | bypasses generation entirely |
 | `quiz?` | `QuizQuestion[]` | hand-written drills layered onto generated ones |
 
@@ -379,8 +381,8 @@ own 0.5–0.8s entrance animation.
 ## 9. The practice engine (`src/engine/game.ts`)
 
 Serves the community, stud and draw families — 22 of the 39 variants. Specialized casino games do
-not enter this engine: `house.ts` owns dealer qualification and payouts, while `letItRide.ts` owns
-the two withdrawals and standard main-wager paytable behind their respective `practiceMode` values.
+not enter this engine: `house.ts` owns the one-decision dealer games, `letItRide.ts` owns two
+withdrawals, and `ultimateHoldem.ts` owns the 4×/3×, 2× and 1× Play windows and Blind paytable.
 
 ```ts
 newGame(variant, seatCount, seed) → Game
@@ -450,7 +452,8 @@ family weight, so the house games and kitchen-table curiosities sit behind the r
 practice tab wrapped in an `ErrorBoundary` so one bad script can't blank the app.
 
 **`Practice.tsx`** — orders *Play a hand* before *Drills*, selects live play by default for playable
-variants, and routes specialized practice modes to `HousePractice` or `LetItRidePractice`.
+variants, and routes specialized practice modes to `HousePractice`, `LetItRidePractice` or
+`UltimateHoldemPractice`.
 Unsupported games keep the play control disabled and default to drills.
 
 **`TutorialPlayer.tsx`** — holds only `index` and `playing`. Autoplay uses each step's `hold`
@@ -480,15 +483,16 @@ chinese-poker, open-face-chinese
 
 **House (4)** — three-card-poker, ultimate-texas-holdem, caribbean-stud, let-it-ride
 
-25 are `playable`: 22 through the peer-poker engine, Three Card Poker and Caribbean Stud through
-the isolated house engine, and Let It Ride through its two-decision engine. 11 carry a
+26 are `playable`: 22 through the peer-poker engine, Three Card Poker and Caribbean Stud through
+the isolated house engine, Let It Ride through its withdrawal engine, and Ultimate Texas Hold'em
+through its three-window engine. 11 carry a
 `customTutorial`: anaconda, guts, indian-poker, chinese-poker,
 open-face-chinese, horse, eight-game, three-card-poker, ultimate-texas-holdem, caribbean-stud,
 let-it-ride.
 
 ---
 
-## 13. Tests (`src/engine/engine.test.ts`, 32 tests)
+## 13. Tests (`src/engine/engine.test.ts`, 37 tests)
 
 The valuable ones are the sweeps:
 
@@ -503,6 +507,8 @@ The valuable ones are the sweeps:
   wager → reveal → award animation frames.
 - **Let It Ride engine** — verifies every standard pay tier from a pair of tens through a royal,
   zero/one/two withdrawals, exact chip returns, both decisions, card reveals and the final award.
+- **Ultimate Texas Hold'em engine** — verifies the Blind ladder, dealer qualification, independent
+  Ante/Blind/Play settlement, 3×/4×, 2× and 1× windows, fold, reveal frames and exact chip motion.
 - **practice animation frames** — verifies a fresh hand separates forced bets, dealing, bot actions
   and the hero handoff; verifies a raise is visible before responses; and verifies collection,
   showdown reveal and award occur as distinct frames.

@@ -309,7 +309,7 @@ export const houseVariants: Variant[] = [
     family: "house",
     tagline: "Hold'em against the dealer, where betting earlier wins you more.",
     summary:
-      "You get two cards, the dealer gets two, and a normal five-card board is dealt. The twist is that you may make your Play bet at one of three moments — before the flop at 4×, after the flop at 2×, or after the river at 1× — and the earlier you commit, the larger the wager you are allowed.",
+      "You get two cards, the dealer gets two, and a normal five-card board is dealt. The twist is that you may make your Play bet at one of three moments — before the flop at 3× or 4×, after the flop at 2×, or after the river at 1× — and the earlier you commit, the larger the wager you are allowed.",
     deck: 52,
     holeCards: 2,
     boards: 1,
@@ -327,7 +327,7 @@ export const houseVariants: Variant[] = [
     streets: [],
     keyIdeas: [
       "Ante and Blind are both required and equal. A separate Trips side bet is optional.",
-      "You bet Play once only: 4× preflop, 2× after the flop, or 1× after the river.",
+      "You bet Play once only: 3× or 4× preflop, 2× after the flop, or 1× after the river.",
       "The dealer needs at least a pair to qualify; if they do not, the Ante pushes.",
       "The Blind bet only pays when you win with a straight or better — otherwise it pushes.",
     ],
@@ -339,7 +339,10 @@ export const houseVariants: Variant[] = [
       "Bet 4× preflop with any pair of threes or better, any ace, and big suited cards.",
       "Check to the river with marginal holdings and make the 1× bet only if you beat the board.",
     ],
-    playable: false,
+    // AI_CHANGE: Ultimate Texas Hold'em uses an isolated three-window practice engine so its
+    // casino wagers and qualification rules cannot leak into ordinary community-card poker.
+    playable: true,
+    practiceMode: "ultimate-holdem",
     customTutorial: [
       {
         id: "intro",
@@ -363,8 +366,8 @@ export const houseVariants: Variant[] = [
       },
       {
         id: "preflop",
-        title: "The 4× decision",
-        text: "You receive two cards. Right now — before any board card — you may make your **Play bet at four times the ante**. This is the only moment the 4× option exists, and it is where the game's value lives.",
+        title: "The 3× or 4× decision",
+        text: "You receive two cards. Right now — before any board card — you may make your **Play bet at three or four times the ante**. This is the only moment either large option exists; strong hands should use 4×.",
         actions: [{ t: "dealEach", count: 2, faceUp: false }, { t: "reveal", seat: 0 }],
         tip: "Bet 4× with any pair of 3s or better, any ace, and strong suited cards. Otherwise check.",
         hold: 5000,

@@ -397,6 +397,30 @@ export function PokerTable({ state, feltMark }: { state: TableState; feltMark?: 
                   {seat.returned}
                 </div>
               ) : null}
+              {seat.added ? (
+                // AI_CHANGE:
+                // Tool: Codex
+                // Model: GPT-5
+                // Timestamp: 2026-07-31T13:00:00-04:00
+                // Purpose: Animates only newly committed chips while earlier wagers remain still.
+                // Reason: Ultimate Texas Hold'em starts with Ante and Blind already on the felt;
+                //         the later Play wager must visibly join them rather than re-deal the pile.
+                <div
+                  key={`${seat.index}-added-${seat.added}`}
+                  className="wager adding"
+                  style={
+                    {
+                      left: chip.x,
+                      top: chip.y,
+                      "--fx": `${point.x - chip.x}px`,
+                      "--fy": `${point.y - chip.y}px`,
+                    } as React.CSSProperties
+                  }
+                >
+                  <ChipStack amount={seat.added} />
+                  {seat.added}
+                </div>
+              ) : null}
             </div>
           );
         })}

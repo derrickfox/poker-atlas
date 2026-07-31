@@ -24,6 +24,7 @@ import {
 import { PokerTable } from "./PokerTable";
 import { HousePractice } from "./HousePractice";
 import { LetItRidePractice } from "./LetItRidePractice";
+import { UltimateHoldemPractice } from "./UltimateHoldemPractice";
 
 /* -------------------------------------------------------------------- minicards */
 
@@ -491,6 +492,8 @@ export function Practice({ variant }: { variant: Variant }) {
       ) : canPlay ? (
         variant.practiceMode === "house" ? (
           <HousePractice key={variant.id} variant={variant} />
+        ) : variant.practiceMode === "ultimate-holdem" ? (
+          <UltimateHoldemPractice key={variant.id} variant={variant} />
         ) : variant.practiceMode === "let-it-ride" ? (
           <LetItRidePractice key={variant.id} variant={variant} />
         ) : (
