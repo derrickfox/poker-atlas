@@ -201,6 +201,13 @@ export const mixedVariants: Variant[] = [
   },
 ];
 
+// AI_CHANGE:
+// Tool: Codex
+// Model: GPT-5
+// Timestamp: 2026-07-31T10:15:00-04:00
+// Purpose: Enables isolated practice engines for Three Card Poker and Caribbean Stud.
+// Reason: These one-decision dealer games are the safest first increment toward playable coverage
+//         for all variants because they do not modify the established street-game engine.
 export const houseVariants: Variant[] = [
   {
     id: "three-card-poker",
@@ -238,7 +245,8 @@ export const houseVariants: Variant[] = [
       "The complete optimal strategy is one line: play Q-6-4 or better, fold everything else.",
       "The house edge is roughly 3.4% on the ante-play bet — treat it as entertainment, not income.",
     ],
-    playable: false,
+    playable: true,
+    practiceMode: "house",
     customTutorial: [
       {
         id: "intro",
@@ -301,7 +309,7 @@ export const houseVariants: Variant[] = [
     family: "house",
     tagline: "Hold'em against the dealer, where betting earlier wins you more.",
     summary:
-      "You get two cards, the dealer gets two, and a normal five-card board is dealt. The twist is that you may make your Play bet at one of three moments — before the flop at 4×, after the flop at 2×, or after the river at 1× — and the earlier you commit, the larger the wager you are allowed.",
+      "You get two cards, the dealer gets two, and a normal five-card board is dealt. The twist is that you may make your Play bet at one of three moments — before the flop at 3× or 4×, after the flop at 2×, or after the river at 1× — and the earlier you commit, the larger the wager you are allowed.",
     deck: 52,
     holeCards: 2,
     boards: 1,
@@ -319,7 +327,7 @@ export const houseVariants: Variant[] = [
     streets: [],
     keyIdeas: [
       "Ante and Blind are both required and equal. A separate Trips side bet is optional.",
-      "You bet Play once only: 4× preflop, 2× after the flop, or 1× after the river.",
+      "You bet Play once only: 3× or 4× preflop, 2× after the flop, or 1× after the river.",
       "The dealer needs at least a pair to qualify; if they do not, the Ante pushes.",
       "The Blind bet only pays when you win with a straight or better — otherwise it pushes.",
     ],
@@ -331,7 +339,10 @@ export const houseVariants: Variant[] = [
       "Bet 4× preflop with any pair of threes or better, any ace, and big suited cards.",
       "Check to the river with marginal holdings and make the 1× bet only if you beat the board.",
     ],
-    playable: false,
+    // AI_CHANGE: Ultimate Texas Hold'em uses an isolated three-window practice engine so its
+    // casino wagers and qualification rules cannot leak into ordinary community-card poker.
+    playable: true,
+    practiceMode: "ultimate-holdem",
     customTutorial: [
       {
         id: "intro",
@@ -355,8 +366,8 @@ export const houseVariants: Variant[] = [
       },
       {
         id: "preflop",
-        title: "The 4× decision",
-        text: "You receive two cards. Right now — before any board card — you may make your **Play bet at four times the ante**. This is the only moment the 4× option exists, and it is where the game's value lives.",
+        title: "The 3× or 4× decision",
+        text: "You receive two cards. Right now — before any board card — you may make your **Play bet at three or four times the ante**. This is the only moment either large option exists; strong hands should use 4×.",
         actions: [{ t: "dealEach", count: 2, faceUp: false }, { t: "reveal", seat: 0 }],
         tip: "Bet 4× with any pair of 3s or better, any ace, and strong suited cards. Otherwise check.",
         hold: 5000,
@@ -430,7 +441,8 @@ export const houseVariants: Variant[] = [
       "Raise with any pair or better; fold anything below ace-king high.",
       "With exactly ace-king, raise if the dealer's upcard matches one of your cards or is lower than your fourth-highest card.",
     ],
-    playable: false,
+    playable: true,
+    practiceMode: "house",
     customTutorial: [
       {
         id: "intro",
@@ -520,7 +532,10 @@ export const houseVariants: Variant[] = [
       "Let the first bet ride only with a paying hand already, three to a royal, or three suited connectors.",
       "Let the second ride with any made paying hand or four to a flush or open-ended straight.",
     ],
-    playable: false,
+    // AI_CHANGE: Let It Ride uses its own two-decision practice engine so its withdrawals and
+    // paytable stay independent from both peer poker and dealer-versus-player casino games.
+    playable: true,
+    practiceMode: "let-it-ride",
     customTutorial: [
       {
         id: "intro",

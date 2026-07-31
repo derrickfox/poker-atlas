@@ -29,7 +29,33 @@ import {
   legalActions,
   newGame,
   newGameFrames,
+  winningCardIds,
 } from "./game";
+import {
+  houseActionFrames,
+  houseGameToTable,
+  newHouseGame,
+  resolveHouseRound,
+  scoreThreeCard,
+  threeCardDealerQualifies,
+} from "./house";
+import {
+  letItRideActionFrames,
+  letItRideOdds,
+  letItRideToTable,
+  newLetItRideFrames,
+  newLetItRideGame,
+  resolveLetItRide,
+} from "./letItRide";
+import {
+  newUltimateHoldemFrames,
+  newUltimateHoldemGame,
+  resolveUltimateHoldem,
+  ultimateBlindOdds,
+  ultimateHoldemActionFrames,
+  ultimateHoldemLegalActions,
+  ultimateHoldemToTable,
+} from "./ultimateHoldem";
 import { variants } from "../data";
 
 const FREE = { useHole: null, useBoard: null, handSize: 5 };
@@ -112,6 +138,31 @@ describe("hand selection", () => {
     expect(bestHi(twoSpades, board, "high", omaha).value[0]).toBe(5);
   });
 
+  it("identifies the exact private and shared cards in an Omaha winning combination", () => {
+    const board = parseCards("As Ks 9s 7d 2c");
+    const winnerCards = parseCards("Qs Js 8h 6d");
+    const loserCards = parseCards("Ah Kd 4c 3c");
+    const omaha = { useHole: 2, useBoard: 3, handSize: 5 };
+    const winner = bestHi(winnerCards, board, "high", omaha);
+    const loser = bestHi(loserCards, board, "high", omaha);
+    const ids = winningCardIds({
+      hiWinners: [0],
+      loWinners: [],
+      hiScore: winner,
+      loScore: null,
+      perPlayer: [
+        { index: 0, hi: winner, lo: null },
+        { index: 1, hi: loser, lo: null },
+      ],
+      awards: [{ index: 0, amount: 16 }],
+      summary: "You win with a flush.",
+    });
+
+    expect(ids).toEqual(new Set(winner.cards.map((card) => card.id)));
+    expect(winner.cards.filter((card) => winnerCards.some((hole) => hole.id === card.id))).toHaveLength(2);
+    expect(winner.cards.filter((card) => board.some((shared) => shared.id === card.id))).toHaveLength(3);
+  });
+
   it("lets a single hole card play in Hold'em", () => {
     const board = parseCards("As Ks 9s 4s 2c");
     const oneSpade = parseCards("Qs Jh");
@@ -126,6 +177,268 @@ describe("hand selection", () => {
   });
 });
 
+describe("dealer-banked practice", () => {
+  it("uses the official Three Card Poker ranking order and queen-high qualification", () => {
+    const straightFlush = scoreThreeCard(parseCards("Qs Js Ts"));
+    const trips = scoreThreeCard(parseCards("9s 9h 9d"));
+    const straight = scoreThreeCard(parseCards("8s 7h 6d"));
+    const flush = scoreThreeCard(parseCards("As 8s 4s"));
+    const pair = scoreThreeCard(parseCards("Ks Kh 2d"));
+    expect(compareScores(straightFlush, trips)).toBe(1);
+    expect(compareScores(trips, straight)).toBe(1);
+    expect(compareScores(straight, flush)).toBe(1);
+    expect(compareScores(flush, pair)).toBe(1);
+    expect(threeCardDealerQualifies(scoreThreeCard(parseCards("Qs 6h 4d")))).toBe(true);
+    expect(threeCardDealerQualifies(scoreThreeCard(parseCards("Js Th 8d")))).toBe(false);
+  });
+
+  it("settles Three Card Poker qualification, wins, folds and ante bonuses exactly", () => {
+    const pairWin = resolveHouseRound(
+      "three-card-poker",
+      parseCards("As Ah 2d"),
+      parseCards("Ks Qh 9d"),
+      "play",
+    );
+    const straightBonus = resolveHouseRound(
+      "three-card-poker",
+      parseCards("6s 5h 4d"),
+      parseCards("Ks Qh 9d"),
+      "play",
+    );
+    const dealerMisses = resolveHouseRound(
+      "three-card-poker",
+      parseCards("7s 5h 2d"),
+      parseCards("Js Th 8d"),
+      "play",
+    );
+    const folded = resolveHouseRound(
+      "three-card-poker",
+      parseCards("7s 5h 2d"),
+      parseCards("As Ah 8d"),
+      "fold",
+    );
+    expect(pairWin.net).toBe(20);
+    expect(straightBonus.net).toBe(30);
+    expect(dealerMisses.net).toBe(10);
+    expect(folded.net).toBe(-10);
+  });
+
+  it("settles Caribbean Stud qualification and the raise payout ladder", () => {
+    const pairWin = resolveHouseRound(
+      "caribbean-stud",
+      parseCards("As Ah 9d 5c 2s"),
+      parseCards("Ad Kh Qs 8c 3d"),
+      "play",
+    );
+    const royalWin = resolveHouseRound(
+      "caribbean-stud",
+      parseCards("As Ks Qs Js Ts"),
+      parseCards("9d 9c 8s 5h 2d"),
+      "play",
+    );
+    const dealerMisses = resolveHouseRound(
+      "caribbean-stud",
+      parseCards("7s 6h 5d 3c 2s"),
+      parseCards("Ad Qh Js 8c 3d"),
+      "play",
+    );
+    expect(pairWin.net).toBe(30);
+    expect(royalWin.net).toBe(2010);
+    expect(dealerMisses.net).toBe(10);
+  });
+
+  it("separates the house-game wager, reveal and award into visible frames", () => {
+    for (const id of ["three-card-poker", "caribbean-stud"] as const) {
+      const game = newHouseGame(id, 71);
+      const frames = houseActionFrames(game, "play");
+      expect(frames.map((frame) => frame.stage)).toEqual(["decision", "reveal", "done"]);
+      expect(frames[0].wager).toBeGreaterThan(game.wager);
+      expect(frames[1].outcome).toBeUndefined();
+      expect(frames[2].outcome).toBeTruthy();
+      const table = houseGameToTable(frames[2]);
+      const emphasized = table.cards.filter((card) => card.emphasis === "play");
+      expect(emphasized.length === 0 || emphasized.length === game.hero.length).toBe(true);
+    }
+  });
+});
+
+describe("Let It Ride practice", () => {
+  it("uses the standard main-wager paytable from a pair of tens through a royal flush", () => {
+    const hands: [string, number][] = [
+      ["As Ks Qs Js Ts", 1000],
+      ["9s 8s 7s 6s 5s", 200],
+      ["9s 9h 9d 9c 5s", 50],
+      ["9s 9h 9d 5c 5s", 11],
+      ["As Js 8s 5s 2s", 8],
+      ["9s 8h 7d 6c 5s", 5],
+      ["9s 9h 9d 6c 5s", 3],
+      ["9s 9h 6d 6c 5s", 2],
+      ["Ts Th 8d 6c 5s", 1],
+      ["9s 9h 8d 6c 5s", 0],
+    ];
+    for (const [cards, odds] of hands) {
+      expect(letItRideOdds(scoreFiveHigh(parseCards(cards))), cards).toBe(odds);
+    }
+  });
+
+  it("returns withdrawn bets and settles only the wagers still riding", () => {
+    const hero = parseCards("Ts Th 8d");
+    const board = parseCards("6c 5s");
+    expect(resolveLetItRide(hero, board, 0).net).toBe(30);
+    expect(resolveLetItRide(hero, board, 1).net).toBe(20);
+    expect(resolveLetItRide(hero, board, 2).net).toBe(10);
+
+    const misses = resolveLetItRide(parseCards("9s 8h 6d"), parseCards("4c 2s"), 2);
+    expect(misses.qualifies).toBe(false);
+    expect(misses.returned).toBe(20);
+    expect(misses.net).toBe(-10);
+    expect(misses.summary).toContain("1 remaining bet loses 10 chips");
+  });
+
+  it("paces both decisions, card reveals and final payout as separate visible frames", () => {
+    const opening = newLetItRideFrames(73);
+    expect(opening.map((frame) => frame.stage)).toEqual(["bets", "first-decision"]);
+    expect(letItRideToTable(opening[0]).cards).toHaveLength(0);
+    expect(letItRideToTable(opening[1]).cards).toHaveLength(3);
+
+    const first = letItRideActionFrames(newLetItRideGame(73), "pull");
+    expect(first.map((frame) => frame.stage)).toEqual(["first-decision", "second-decision"]);
+    expect(first[0].wager).toBe(20);
+    expect(first[0].stack).toBe(180);
+    expect(letItRideToTable(first[0]).seats[0].returned).toBe(10);
+    expect(letItRideToTable(first[1]).seats[0].returned).toBeUndefined();
+    expect(letItRideToTable(first[1]).cards).toHaveLength(4);
+
+    const second = letItRideActionFrames(first[1], "ride");
+    expect(second.map((frame) => frame.stage)).toEqual(["second-decision", "reveal", "done"]);
+    expect(second[1].outcome).toBeUndefined();
+    expect(second[2].outcome).toBeTruthy();
+    expect(second[2].wager).toBe(0);
+    expect(letItRideToTable(second[2]).cards).toHaveLength(5);
+  });
+});
+
+describe("Ultimate Texas Hold'em practice", () => {
+  it("uses the standard Blind paytable and pushes hands below a straight", () => {
+    const hands: [string, number | null][] = [
+      ["As Ks Qs Js Ts", 500],
+      ["9s 8s 7s 6s 5s", 50],
+      ["9s 9h 9d 9c 5s", 10],
+      ["9s 9h 9d 5c 5s", 3],
+      ["As Js 8s 5s 2s", 1.5],
+      ["9s 8h 7d 6c 5s", 1],
+      ["9s 9h 9d 6c 5s", null],
+    ];
+    for (const [cards, odds] of hands) {
+      expect(ultimateBlindOdds(scoreFiveHigh(parseCards(cards))), cards).toBe(odds);
+    }
+  });
+
+  it("settles qualification, Play, Ante and Blind payouts independently", () => {
+    const royal = resolveUltimateHoldem(
+      parseCards("As Ks"),
+      parseCards("9h 9d"),
+      parseCards("Ts Js Qs 2d 3c"),
+      4,
+    );
+    expect(royal.dealerQualifies).toBe(true);
+    expect(royal.blindOdds).toBe(500);
+    expect(royal.net).toBe(5050);
+
+    const flush = resolveUltimateHoldem(
+      parseCards("As 8s"),
+      parseCards("Kh Qh"),
+      parseCards("Ks 9s 4s 2d 3c"),
+      1,
+    );
+    expect(flush.blindOdds).toBe(1.5);
+    expect(flush.net).toBe(35);
+
+    const pairAgainstMiss = resolveUltimateHoldem(
+      parseCards("As Ad"),
+      parseCards("Kc Qd"),
+      parseCards("9c 7d 4h 3c 2s"),
+      4,
+    );
+    expect(pairAgainstMiss.dealerQualifies).toBe(false);
+    expect(pairAgainstMiss.blindOdds).toBeNull();
+    expect(pairAgainstMiss.net).toBe(40);
+  });
+
+  it("returns the Ante on a dealer miss even when the dealer wins, and handles ties and folds", () => {
+    const dealerMissWins = resolveUltimateHoldem(
+      parseCards("Qs Jh"),
+      parseCards("As Kd"),
+      parseCards("9c 7d 4h 3c 2s"),
+      1,
+    );
+    expect(dealerMissWins.result).toBe("loss");
+    expect(dealerMissWins.dealerQualifies).toBe(false);
+    expect(dealerMissWins.returned).toBe(10);
+    expect(dealerMissWins.net).toBe(-20);
+
+    const tiedBoard = resolveUltimateHoldem(
+      parseCards("2c 3d"),
+      parseCards("4c 5d"),
+      parseCards("As Ks Qs Js Ts"),
+      2,
+    );
+    expect(tiedBoard.result).toBe("push");
+    expect(tiedBoard.net).toBe(0);
+    expect(tiedBoard.returned).toBe(40);
+
+    const folded = resolveUltimateHoldem(
+      parseCards("2c 3d"),
+      parseCards("As Ad"),
+      parseCards("4s 5s 6s 7s 8s"),
+      null,
+    );
+    expect(folded.result).toBe("fold");
+    expect(folded.net).toBe(-20);
+  });
+
+  it("reveals exactly the information available at each shrinking decision window", () => {
+    const opening = newUltimateHoldemFrames(91);
+    expect(opening.map((frame) => frame.stage)).toEqual(["bets", "preflop"]);
+    expect(ultimateHoldemToTable(opening[0]).cards).toHaveLength(0);
+    expect(ultimateHoldemToTable(opening[1]).cards).toHaveLength(4);
+    expect(ultimateHoldemLegalActions(opening[1])).toEqual(["check", "bet-3x", "bet-4x"]);
+
+    const flop = ultimateHoldemActionFrames(opening[1], "check");
+    expect(flop.map((frame) => frame.stage)).toEqual(["preflop", "flop"]);
+    expect(ultimateHoldemToTable(flop[1]).cards).toHaveLength(7);
+    expect(ultimateHoldemLegalActions(flop[1])).toEqual(["check", "bet-2x"]);
+
+    const river = ultimateHoldemActionFrames(flop[1], "check");
+    expect(river.map((frame) => frame.stage)).toEqual(["flop", "river"]);
+    expect(ultimateHoldemToTable(river[1]).cards).toHaveLength(9);
+    expect(ultimateHoldemLegalActions(river[1])).toEqual(["fold", "bet-1x"]);
+  });
+
+  it("paces a Play wager, both board reveals, dealer reveal and award as separate frames", () => {
+    const game = newUltimateHoldemGame(117);
+    const frames = ultimateHoldemActionFrames(game, "bet-4x");
+    expect(frames.map((frame) => frame.stage)).toEqual([
+      "preflop",
+      "flop",
+      "river",
+      "dealer-reveal",
+      "done",
+    ]);
+    const betTable = ultimateHoldemToTable(frames[0]);
+    expect(betTable.seats[0].wager).toBe(20);
+    expect(betTable.seats[0].added).toBe(40);
+    expect(ultimateHoldemToTable(frames[1]).seats[0].wager).toBe(60);
+    expect(frames[3].outcome).toBeUndefined();
+    expect(frames[4].outcome).toBeTruthy();
+    expect(frames[4].wager).toBe(0);
+    const emphasized = ultimateHoldemToTable(frames[4]).cards.filter(
+      (card) => card.emphasis === "play",
+    );
+    expect(emphasized.length === 0 || emphasized.length === 5).toBe(true);
+  });
+});
+
 describe("catalog", () => {
   it("has unique ids and complete copy", () => {
     const ids = variants.map((v) => v.id);
@@ -136,6 +449,22 @@ describe("catalog", () => {
       expect(variant.strategy.length).toBeGreaterThan(0);
       expect(variant.betting.length).toBeGreaterThan(0);
     }
+  });
+
+  it("routes each specialized playable game to its matching isolated engine", () => {
+    expect(variants.find((variant) => variant.id === "let-it-ride")).toMatchObject({
+      playable: true,
+      practiceMode: "let-it-ride",
+    });
+    expect(variants.find((variant) => variant.id === "ultimate-texas-holdem")).toMatchObject({
+      playable: true,
+      practiceMode: "ultimate-holdem",
+    });
+    expect(variants.find((variant) => variant.id === "horse")?.playable).toBe(false);
+    expect(
+      variants.filter((variant) => variant.playable && variant.practiceMode === "house")
+        .map((variant) => variant.id),
+    ).toEqual(["three-card-poker", "caribbean-stud"]);
   });
 });
 
@@ -218,7 +547,9 @@ describe("practice engine", () => {
   }
 
   it("plays every playable variant to a settled showdown", () => {
-    const playable = variants.filter((v) => v.playable);
+    const playable = variants.filter(
+      (variant) => variant.playable && (variant.practiceMode ?? "street") === "street",
+    );
     expect(playable.length).toBeGreaterThan(15);
 
     for (const variant of playable) {
@@ -234,7 +565,9 @@ describe("practice engine", () => {
   });
 
   it("never deals a duplicate card during a hand", () => {
-    for (const variant of variants.filter((v) => v.playable)) {
+    for (const variant of variants.filter(
+      (candidate) => candidate.playable && (candidate.practiceMode ?? "street") === "street",
+    )) {
       const rng = makeRng(42);
       const finished = autoPlay(newGame(variant, 4, 12345), rng);
       const dealt = [...finished.players.flatMap((p) => p.cards), ...finished.board].map((c) => c.id);
