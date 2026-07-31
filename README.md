@@ -52,12 +52,14 @@ src/
     table.ts                reduces script actions into TableState
     game.ts                 the playable engine (deal, bet, draw, settle)
     house.ts                isolated dealer-game rules and payout engine
+    letItRide.ts            isolated withdrawals and main-wager paytable
     drills.ts               generates practice questions
   components/
     PokerTable.tsx          renders TableState; cards animate via CSS transforms
     TutorialPlayer.tsx      script playback with autoplay and a step rail
     Practice.tsx            drills + practice-mode routing
     HousePractice.tsx       animated dealer-game practice
+    LetItRidePractice.tsx   animated two-decision Let It Ride practice
     Dashboard.tsx           catalog and filters
 ```
 
@@ -85,8 +87,9 @@ Two ideas carry most of the weight:
 - **Against the house** — Three Card Poker, Ultimate Texas Hold'em, Caribbean Stud, Let It Ride
 
 Every variant has an animated tutorial and drills. The 22 that fit the deal-and-bet model are
-playable against bots; Three Card Poker and Caribbean Stud also have isolated dealer-game practice
-modes. The remaining variants say so and lean on the walkthrough.
+playable against bots; Three Card Poker and Caribbean Stud have isolated dealer-game practice, and
+Let It Ride has an isolated two-decision practice mode. The remaining variants say so and lean on
+the walkthrough.
 
 ## Caveats
 

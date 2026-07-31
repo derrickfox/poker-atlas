@@ -725,6 +725,23 @@ a {
   }
 }
 
+/* A withdrawn wager travels in the opposite direction: felt back to the player's stack. */
+.wager.returning {
+  pointer-events: none;
+  animation: chip-return 0.9s cubic-bezier(0.22, 0.9, 0.28, 1) forwards;
+}
+
+@keyframes chip-return {
+  from {
+    transform: translate(-50%, -50%);
+    opacity: 1;
+  }
+  to {
+    transform: translate(-50%, -50%) translate(var(--tx, 0), var(--ty, 0)) scale(0.6);
+    opacity: 0;
+  }
+}
+
 /* Discs stack upward out of the box, so the box keeps a single chip's footprint in flow layout. */
 .chips {
   position: relative;

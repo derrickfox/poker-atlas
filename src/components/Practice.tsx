@@ -23,6 +23,7 @@ import {
 } from "../engine/game";
 import { PokerTable } from "./PokerTable";
 import { HousePractice } from "./HousePractice";
+import { LetItRidePractice } from "./LetItRidePractice";
 
 /* -------------------------------------------------------------------- minicards */
 
@@ -490,6 +491,8 @@ export function Practice({ variant }: { variant: Variant }) {
       ) : canPlay ? (
         variant.practiceMode === "house" ? (
           <HousePractice key={variant.id} variant={variant} />
+        ) : variant.practiceMode === "let-it-ride" ? (
+          <LetItRidePractice key={variant.id} variant={variant} />
         ) : (
           <PlayHand key={variant.id} variant={variant} />
         )

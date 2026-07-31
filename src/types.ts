@@ -122,7 +122,7 @@ export interface Variant {
   /** Extra variant-specific quiz questions layered on top of the generated drills. */
   quiz?: QuizQuestion[];
   /** Selects an isolated practice rules engine when the normal street engine does not apply. */
-  practiceMode?: "street" | "house";
+  practiceMode?: "street" | "house" | "let-it-ride";
 }
 
 /* ---------------------------------------------------------------- tutorial script */
@@ -150,6 +150,10 @@ export interface TableSeat {
   stack: number;
   /** Chips committed on the current street, shown in front of the seat. */
   wager: number;
+  /** Stable key for games where a wager shrinks in place instead of being replaced by a new bet. */
+  wagerKey?: string;
+  /** Chips visibly travelling back from the wager position to the player's stack this frame. */
+  returned?: number;
   folded: boolean;
   isHero: boolean;
   /** Action label bubble, e.g. "raises to 12". */

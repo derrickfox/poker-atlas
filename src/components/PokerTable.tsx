@@ -358,7 +358,7 @@ export function PokerTable({ state, feltMark }: { state: TableState; feltMark?: 
               {seat.wager > 0 ? (
                 // Keyed on the amount so every fresh bet remounts and replays the slide-in.
                 <div
-                  key={`${seat.index}-${seat.wager}`}
+                  key={seat.wagerKey ?? `${seat.index}-${seat.wager}`}
                   className="wager"
                   style={
                     {
@@ -371,6 +371,30 @@ export function PokerTable({ state, feltMark }: { state: TableState; feltMark?: 
                 >
                   <ChipStack amount={seat.wager} />
                   {seat.wager}
+                </div>
+              ) : null}
+              {seat.returned ? (
+                // AI_CHANGE:
+                // Tool: Codex
+                // Model: GPT-5
+                // Timestamp: 2026-07-31T12:20:00-04:00
+                // Purpose: Shows withdrawn chips travelling from the wager back to the player.
+                // Reason: Let It Ride teaches withdrawal as a physical table action; reversing the
+                //         chip motion makes the reduced wager and increased stack intuitive.
+                <div
+                  key={`${seat.index}-return-${seat.returned}`}
+                  className="wager returning"
+                  style={
+                    {
+                      left: chip.x,
+                      top: chip.y,
+                      "--tx": `${point.x - chip.x}px`,
+                      "--ty": `${point.y - chip.y}px`,
+                    } as React.CSSProperties
+                  }
+                >
+                  <ChipStack amount={seat.returned} />
+                  {seat.returned}
                 </div>
               ) : null}
             </div>

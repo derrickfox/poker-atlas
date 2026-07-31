@@ -529,7 +529,10 @@ export const houseVariants: Variant[] = [
       "Let the first bet ride only with a paying hand already, three to a royal, or three suited connectors.",
       "Let the second ride with any made paying hand or four to a flush or open-ended straight.",
     ],
-    playable: false,
+    // AI_CHANGE: Let It Ride uses its own two-decision practice engine so its withdrawals and
+    // paytable stay independent from both peer poker and dealer-versus-player casino games.
+    playable: true,
+    practiceMode: "let-it-ride",
     customTutorial: [
       {
         id: "intro",

@@ -39,6 +39,14 @@ import {
   scoreThreeCard,
   threeCardDealerQualifies,
 } from "./house";
+import {
+  letItRideActionFrames,
+  letItRideOdds,
+  letItRideToTable,
+  newLetItRideFrames,
+  newLetItRideGame,
+  resolveLetItRide,
+} from "./letItRide";
 import { variants } from "../data";
 
 const FREE = { useHole: null, useBoard: null, handSize: 5 };
@@ -245,6 +253,61 @@ describe("dealer-banked practice", () => {
   });
 });
 
+describe("Let It Ride practice", () => {
+  it("uses the standard main-wager paytable from a pair of tens through a royal flush", () => {
+    const hands: [string, number][] = [
+      ["As Ks Qs Js Ts", 1000],
+      ["9s 8s 7s 6s 5s", 200],
+      ["9s 9h 9d 9c 5s", 50],
+      ["9s 9h 9d 5c 5s", 11],
+      ["As Js 8s 5s 2s", 8],
+      ["9s 8h 7d 6c 5s", 5],
+      ["9s 9h 9d 6c 5s", 3],
+      ["9s 9h 6d 6c 5s", 2],
+      ["Ts Th 8d 6c 5s", 1],
+      ["9s 9h 8d 6c 5s", 0],
+    ];
+    for (const [cards, odds] of hands) {
+      expect(letItRideOdds(scoreFiveHigh(parseCards(cards))), cards).toBe(odds);
+    }
+  });
+
+  it("returns withdrawn bets and settles only the wagers still riding", () => {
+    const hero = parseCards("Ts Th 8d");
+    const board = parseCards("6c 5s");
+    expect(resolveLetItRide(hero, board, 0).net).toBe(30);
+    expect(resolveLetItRide(hero, board, 1).net).toBe(20);
+    expect(resolveLetItRide(hero, board, 2).net).toBe(10);
+
+    const misses = resolveLetItRide(parseCards("9s 8h 6d"), parseCards("4c 2s"), 2);
+    expect(misses.qualifies).toBe(false);
+    expect(misses.returned).toBe(20);
+    expect(misses.net).toBe(-10);
+  });
+
+  it("paces both decisions, card reveals and final payout as separate visible frames", () => {
+    const opening = newLetItRideFrames(73);
+    expect(opening.map((frame) => frame.stage)).toEqual(["bets", "first-decision"]);
+    expect(letItRideToTable(opening[0]).cards).toHaveLength(0);
+    expect(letItRideToTable(opening[1]).cards).toHaveLength(3);
+
+    const first = letItRideActionFrames(newLetItRideGame(73), "pull");
+    expect(first.map((frame) => frame.stage)).toEqual(["first-decision", "second-decision"]);
+    expect(first[0].wager).toBe(20);
+    expect(first[0].stack).toBe(180);
+    expect(letItRideToTable(first[0]).seats[0].returned).toBe(10);
+    expect(letItRideToTable(first[1]).seats[0].returned).toBeUndefined();
+    expect(letItRideToTable(first[1]).cards).toHaveLength(4);
+
+    const second = letItRideActionFrames(first[1], "ride");
+    expect(second.map((frame) => frame.stage)).toEqual(["second-decision", "reveal", "done"]);
+    expect(second[1].outcome).toBeUndefined();
+    expect(second[2].outcome).toBeTruthy();
+    expect(second[2].wager).toBe(0);
+    expect(letItRideToTable(second[2]).cards).toHaveLength(5);
+  });
+});
+
 describe("catalog", () => {
   it("has unique ids and complete copy", () => {
     const ids = variants.map((v) => v.id);
@@ -255,6 +318,18 @@ describe("catalog", () => {
       expect(variant.strategy.length).toBeGreaterThan(0);
       expect(variant.betting.length).toBeGreaterThan(0);
     }
+  });
+
+  it("routes each specialized playable game to its matching isolated engine", () => {
+    expect(variants.find((variant) => variant.id === "let-it-ride")).toMatchObject({
+      playable: true,
+      practiceMode: "let-it-ride",
+    });
+    expect(variants.find((variant) => variant.id === "horse")?.playable).toBe(false);
+    expect(
+      variants.filter((variant) => variant.playable && variant.practiceMode === "house")
+        .map((variant) => variant.id),
+    ).toEqual(["three-card-poker", "caribbean-stud"]);
   });
 });
 
@@ -337,7 +412,9 @@ describe("practice engine", () => {
   }
 
   it("plays every playable variant to a settled showdown", () => {
-    const playable = variants.filter((v) => v.playable && v.practiceMode !== "house");
+    const playable = variants.filter(
+      (variant) => variant.playable && (variant.practiceMode ?? "street") === "street",
+    );
     expect(playable.length).toBeGreaterThan(15);
 
     for (const variant of playable) {
@@ -353,7 +430,9 @@ describe("practice engine", () => {
   });
 
   it("never deals a duplicate card during a hand", () => {
-    for (const variant of variants.filter((v) => v.playable && v.practiceMode !== "house")) {
+    for (const variant of variants.filter(
+      (candidate) => candidate.playable && (candidate.practiceMode ?? "street") === "street",
+    )) {
       const rng = makeRng(42);
       const finished = autoPlay(newGame(variant, 4, 12345), rng);
       const dealt = [...finished.players.flatMap((p) => p.cards), ...finished.board].map((c) => c.id);
