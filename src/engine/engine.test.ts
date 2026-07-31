@@ -283,6 +283,7 @@ describe("Let It Ride practice", () => {
     expect(misses.qualifies).toBe(false);
     expect(misses.returned).toBe(20);
     expect(misses.net).toBe(-10);
+    expect(misses.summary).toContain("1 remaining bet loses 10 chips");
   });
 
   it("paces both decisions, card reveals and final payout as separate visible frames", () => {

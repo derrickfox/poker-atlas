@@ -87,9 +87,10 @@ export function resolveLetItRide(
   const returned = withdrawnReturn + settledReturn;
   const net = returned - OPENING_WAGER;
   const betWord = activeBets === 1 ? "bet" : "bets";
+  const lossVerb = activeBets === 1 ? "loses" : "lose";
   const summary = qualifies
     ? `You finish with ${score.label}. Your ${activeBets} remaining ${betWord} pay ${odds} to 1 for ${activeBets * LET_IT_RIDE_BET * odds} chips profit.`
-    : `You finish with ${score.label}, below a pair of tens. Your ${activeBets} remaining ${betWord} lose ${activeBets * LET_IT_RIDE_BET} chips.`;
+    : `You finish with ${score.label}, below a pair of tens. Your ${activeBets} remaining ${betWord} ${lossVerb} ${activeBets * LET_IT_RIDE_BET} chips.`;
 
   return {
     qualifies,
