@@ -56,6 +56,7 @@ export function TutorialPlayer({ variant, onPractice }: { variant: Variant; onPr
           <RichText text={step.text} />
           {step.tip ? <div className="tipbox">{step.tip}</div> : null}
           {/* AI_CHANGE Tool: ChatGPT; Model: GPT-6.1-Sol; Timestamp: 2026-11-16T11:13:28-05:00; Purpose: Label tutorial progress; Reason: Expose progress to assistive technology. */}
+          {/* AI_CHANGE Tool: ChatGPT; Model: GPT-6.1-Sol; Timestamp: 2026-11-16T13:36:25-05:00; Purpose: Describe tutorial progress; Reason: Announce the current step and total in human-readable form. */}
           <div
             className="progress"
             role="progressbar"
@@ -63,6 +64,7 @@ export function TutorialPlayer({ variant, onPractice }: { variant: Variant; onPr
             aria-valuemin={0}
             aria-valuemax={steps.length}
             aria-valuenow={index + 1}
+            aria-valuetext={`Step ${index + 1} of ${steps.length}`}
           >
             <span style={{ width: `${((index + 1) / steps.length) * 100}%` }} />
           </div>
