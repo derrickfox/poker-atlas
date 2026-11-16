@@ -1083,7 +1083,8 @@ a {
   color: var(--ink-dim);
 }
 
-.steprail button[aria-current="true"] {
+/* AI_CHANGE Tool: ChatGPT; Model: GPT-6.1-Sol; Timestamp: 2026-11-16T12:49:57-05:00; Purpose: Match the current step; Reason: Preserve the existing highlight with aria-current="step". */
+.steprail button[aria-current="step"] {
   background: rgba(217, 177, 104, 0.12);
   color: var(--gold);
   font-weight: 600;

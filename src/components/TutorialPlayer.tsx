@@ -98,11 +98,12 @@ export function TutorialPlayer({ variant, onPractice }: { variant: Variant; onPr
           ) : null}
         </div>
 
-        <div className="steprail">
+        {/* AI_CHANGE Tool: ChatGPT; Model: GPT-6.1-Sol; Timestamp: 2026-11-16T12:49:57-05:00; Purpose: Name step navigation and mark the active step; Reason: Improve accessibility and omit inactive aria-current. */}
+        <nav className="steprail" aria-label="Tutorial steps">
           {steps.map((entry, i) => (
             <button
               key={entry.id + i}
-              aria-current={i === index}
+              aria-current={i === index ? "step" : undefined}
               onClick={() => {
                 setIndex(i);
                 setPlaying(false);
@@ -112,7 +113,7 @@ export function TutorialPlayer({ variant, onPractice }: { variant: Variant; onPr
               {entry.title}
             </button>
           ))}
-        </div>
+        </nav>
       </div>
     </div>
   );
