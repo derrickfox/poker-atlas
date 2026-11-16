@@ -1,8 +1,6 @@
 # Poker Atlas
 
-An animated tutorial app for learning every kind of poker. Browse a filterable catalog of 39
-variants, watch any one of them played out card by card, then practise it with drills and a hand
-against bots.
+Poker Atlas is an animated poker tutorial app for exploring 39 variants through a filterable catalog, card-by-card demonstrations, and practice with drills and a hand against bots.
 
 ```bash
 npm install
