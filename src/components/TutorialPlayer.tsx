@@ -71,12 +71,23 @@ export function TutorialPlayer({ variant, onPractice }: { variant: Variant; onPr
         </div>
 
         <div className="controls">
-          <button className="btn" onClick={() => setIndex((i) => Math.max(0, i - 1))} disabled={index === 0}>
+          {/* AI_CHANGE Tool: Claude API | Model: Claude Sonnet 5.5 | Timestamp: 2026-11-16T17:58:44-05:00 | Purpose: Pause autoplay on manual navigation | Reason: Keep the manually selected step visible. */}
+          <button
+            className="btn"
+            onClick={() => {
+              setPlaying(false);
+              setIndex((i) => Math.max(0, i - 1));
+            }}
+            disabled={index === 0}
+          >
             ← Back
           </button>
           <button
             className="btn primary"
-            onClick={() => setIndex((i) => Math.min(steps.length - 1, i + 1))}
+            onClick={() => {
+              setPlaying(false);
+              setIndex((i) => Math.min(steps.length - 1, i + 1));
+            }}
             disabled={atEnd}
           >
             Next →
