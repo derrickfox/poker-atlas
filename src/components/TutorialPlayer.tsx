@@ -81,8 +81,9 @@ export function TutorialPlayer({ variant, onPractice }: { variant: Variant; onPr
           >
             Next →
           </button>
-          <button className="btn" onClick={() => setPlaying((p) => !p)} disabled={atEnd}>
-            {playing ? "Pause" : "Autoplay"}
+          {/* AI_CHANGE Tool: ChatGPT, Model: GPT-6.1-Sol, Timestamp: 2026-11-16T14:16:52-05:00, Purpose: expose autoplay toggle state. Reason: a static label avoids double-announcing state with aria-pressed. */}
+          <button className="btn" onClick={() => setPlaying((p) => !p)} disabled={atEnd} aria-pressed={playing}>
+            Autoplay
           </button>
           <button
             className="btn"
