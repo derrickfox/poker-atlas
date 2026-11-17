@@ -342,10 +342,12 @@ export function PokerTable({ state, feltMark }: { state: TableState; feltMark?: 
                     {seat.name}
                     {seat.badge ? <em className="badge">{seat.badge}</em> : null}
                   </span>
-                  <span className="stack" key={seat.stack}>
-                    <ChipStack amount={seat.stack} size={14} row />
-                    {seat.stack}
-                  </span>
+                  {!seat.hideStack ? (
+                    <span className="stack" key={seat.stack}>
+                      <ChipStack amount={seat.stack} size={14} row />
+                      {seat.stack}
+                    </span>
+                  ) : null}
                 </div>
                 {seat.won ? (
                   <span className="won">+{seat.won}</span>
@@ -356,7 +358,7 @@ export function PokerTable({ state, feltMark }: { state: TableState; feltMark?: 
               {seat.wager > 0 ? (
                 // Keyed on the amount so every fresh bet remounts and replays the slide-in.
                 <div
-                  key={`${seat.index}-${seat.wager}`}
+                  key={seat.wagerKey ?? `${seat.index}-${seat.wager}`}
                   className="wager"
                   style={
                     {
@@ -371,6 +373,54 @@ export function PokerTable({ state, feltMark }: { state: TableState; feltMark?: 
                   {seat.wager}
                 </div>
               ) : null}
+              {seat.returned ? (
+                // AI_CHANGE:
+                // Tool: Codex
+                // Model: GPT-5
+                // Timestamp: 2026-07-31T12:20:00-04:00
+                // Purpose: Shows withdrawn chips travelling from the wager back to the player.
+                // Reason: Let It Ride teaches withdrawal as a physical table action; reversing the
+                //         chip motion makes the reduced wager and increased stack intuitive.
+                <div
+                  key={`${seat.index}-return-${seat.returned}`}
+                  className="wager returning"
+                  style={
+                    {
+                      left: chip.x,
+                      top: chip.y,
+                      "--tx": `${point.x - chip.x}px`,
+                      "--ty": `${point.y - chip.y}px`,
+                    } as React.CSSProperties
+                  }
+                >
+                  <ChipStack amount={seat.returned} />
+                  {seat.returned}
+                </div>
+              ) : null}
+              {seat.added ? (
+                // AI_CHANGE:
+                // Tool: Codex
+                // Model: GPT-5
+                // Timestamp: 2026-07-31T13:00:00-04:00
+                // Purpose: Animates only newly committed chips while earlier wagers remain still.
+                // Reason: Ultimate Texas Hold'em starts with Ante and Blind already on the felt;
+                //         the later Play wager must visibly join them rather than re-deal the pile.
+                <div
+                  key={`${seat.index}-added-${seat.added}`}
+                  className="wager adding"
+                  style={
+                    {
+                      left: chip.x,
+                      top: chip.y,
+                      "--fx": `${point.x - chip.x}px`,
+                      "--fy": `${point.y - chip.y}px`,
+                    } as React.CSSProperties
+                  }
+                >
+                  <ChipStack amount={seat.added} />
+                  {seat.added}
+                </div>
+              ) : null}
             </div>
           );
         })}
@@ -379,7 +429,15 @@ export function PokerTable({ state, feltMark }: { state: TableState; feltMark?: 
           const place = places.get(card.id);
           const isFresh = !known.current.has(card.id);
           const x = isFresh ? DECK.x : (place?.x ?? DECK.x);
-          const y = isFresh ? DECK.y : (place?.y ?? DECK.y);
+          // AI_CHANGE:
+          // Tool: Codex
+          // Model: GPT-5
+          // Timestamp: 2026-07-31T09:00:00-04:00
+          // Purpose: Winning cards move upward as the evaluator marks them for emphasis.
+          // Reason: A physical lift plus the existing glow makes the exact winning combination
+          //         readable at a glance, especially when Omaha leaves two private cards unused.
+          const winningLift = card.emphasis === "play" && !isFresh ? 18 : 0;
+          const y = isFresh ? DECK.y : (place?.y ?? DECK.y) - winningLift;
           const rot = isFresh ? 0 : (place?.rot ?? 0);
           const emphasis = card.emphasis === "play" ? " play" : card.emphasis === "dim" ? " dim" : "";
           const halfW = place?.hero ? 31 : 27;
@@ -393,7 +451,7 @@ export function PokerTable({ state, feltMark }: { state: TableState; feltMark?: 
               style={{
                 left: 0,
                 top: 0,
-                zIndex: 10 + index,
+                zIndex: (card.emphasis === "play" ? 110 : 10) + index,
                 transform: `translate(${x - halfW}px, ${y - halfH}px) rotate(${rot}deg)`,
                 transitionDelay: isFresh ? "0ms" : `${delay}ms`,
               }}

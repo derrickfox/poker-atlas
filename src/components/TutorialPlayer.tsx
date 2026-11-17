@@ -55,27 +55,51 @@ export function TutorialPlayer({ variant, onPractice }: { variant: Variant; onPr
           <h2>{step.title}</h2>
           <RichText text={step.text} />
           {step.tip ? <div className="tipbox">{step.tip}</div> : null}
-          <div className="progress">
+          {/* AI_CHANGE Tool: ChatGPT; Model: GPT-6.1-Sol; Timestamp: 2026-11-16T11:13:28-05:00; Purpose: Label tutorial progress; Reason: Expose progress to assistive technology. */}
+          {/* AI_CHANGE Tool: ChatGPT; Model: GPT-6.1-Sol; Timestamp: 2026-11-16T13:36:25-05:00; Purpose: Describe tutorial progress; Reason: Announce the current step and total in human-readable form. */}
+          <div
+            className="progress"
+            role="progressbar"
+            aria-label="Tutorial progress"
+            aria-valuemin={0}
+            aria-valuemax={steps.length}
+            aria-valuenow={index + 1}
+            aria-valuetext={`Step ${index + 1} of ${steps.length}`}
+          >
             <span style={{ width: `${((index + 1) / steps.length) * 100}%` }} />
           </div>
         </div>
 
         <div className="controls">
-          <button className="btn" onClick={() => setIndex((i) => Math.max(0, i - 1))} disabled={index === 0}>
+          {/* AI_CHANGE Tool: Claude API | Model: Claude Sonnet 5.5 | Timestamp: 2026-11-16T17:58:44-05:00 | Purpose: Pause autoplay on manual navigation | Reason: Keep the manually selected step visible. */}
+          <button
+            className="btn"
+            onClick={() => {
+              setPlaying(false);
+              setIndex((i) => Math.max(0, i - 1));
+            }}
+            disabled={index === 0}
+          >
             ← Back
           </button>
           <button
             className="btn primary"
-            onClick={() => setIndex((i) => Math.min(steps.length - 1, i + 1))}
+            onClick={() => {
+              setPlaying(false);
+              setIndex((i) => Math.min(steps.length - 1, i + 1));
+            }}
             disabled={atEnd}
           >
             Next →
           </button>
-          <button className="btn" onClick={() => setPlaying((p) => !p)} disabled={atEnd}>
-            {playing ? "Pause" : "Autoplay"}
+          {/* AI_CHANGE Tool: ChatGPT, Model: GPT-6.1-Sol, Timestamp: 2026-11-16T14:16:52-05:00, Purpose: expose autoplay toggle state. Reason: a static label avoids double-announcing state with aria-pressed. */}
+          <button className="btn" onClick={() => setPlaying((p) => !p)} disabled={atEnd} aria-pressed={playing}>
+            Autoplay
           </button>
+          {/* AI_CHANGE Tool: Claude API | Model: Claude Sonnet 5.5 | Timestamp: 2026-11-16T18:59:38-05:00 | Purpose: Disable Restart when the tutorial is already reset. | Reason: Keep Restart available while autoplay is running. */}
           <button
             className="btn"
+            disabled={index === 0 && !playing}
             onClick={() => {
               setIndex(0);
               setPlaying(false);
@@ -90,11 +114,12 @@ export function TutorialPlayer({ variant, onPractice }: { variant: Variant; onPr
           ) : null}
         </div>
 
-        <div className="steprail">
+        {/* AI_CHANGE Tool: ChatGPT; Model: GPT-6.1-Sol; Timestamp: 2026-11-16T12:49:57-05:00; Purpose: Name step navigation and mark the active step; Reason: Improve accessibility and omit inactive aria-current. */}
+        <nav className="steprail" aria-label="Tutorial steps">
           {steps.map((entry, i) => (
             <button
               key={entry.id + i}
-              aria-current={i === index}
+              aria-current={i === index ? "step" : undefined}
               onClick={() => {
                 setIndex(i);
                 setPlaying(false);
@@ -104,7 +129,7 @@ export function TutorialPlayer({ variant, onPractice }: { variant: Variant; onPr
               {entry.title}
             </button>
           ))}
-        </div>
+        </nav>
       </div>
     </div>
   );

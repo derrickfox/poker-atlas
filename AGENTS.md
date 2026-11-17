@@ -26,8 +26,8 @@ practice engine, known limitations, and the gotchas that have already cost time.
   tutorial and gets drills automatically. Only reach for new code when a game's structure cannot be
   expressed as a list of streets.
 - **The street builders in `src/data/streets.ts`** (`communityStreets`, `studStreets`, `drawStreets`)
-  cover the community, stud and draw families. Games that do not fit — Chinese Poker, Guts, the
-  casino games — carry a hand-written `customTutorial` array instead and set `playable: false`.
+  cover the community, stud and draw families. Games that do not fit carry a hand-written
+  `customTutorial`; leave `playable: false` unless an isolated `practiceMode` engine is registered.
 - **`src/engine/engine.test.ts` builds and replays every tutorial and auto-plays every playable
   variant.** Run `npm test` after touching the catalog; a malformed street definition shows up there
   rather than as a blank screen in the browser.

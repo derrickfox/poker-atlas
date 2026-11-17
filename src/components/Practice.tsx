@@ -19,8 +19,12 @@ import {
   legalActions,
   newGame,
   newGameFrames,
+  winningCardIds,
 } from "../engine/game";
 import { PokerTable } from "./PokerTable";
+import { HousePractice } from "./HousePractice";
+import { LetItRidePractice } from "./LetItRidePractice";
+import { UltimateHoldemPractice } from "./UltimateHoldemPractice";
 
 /* -------------------------------------------------------------------- minicards */
 
@@ -186,6 +190,8 @@ function Drills({ variant }: { variant: Variant }) {
 
 function gameToTable(game: Game): TableState {
   const showAll = game.phase === "showdown" || game.phase === "done";
+  const winningCards = winningCardIds(game.settlement);
+  const showWinningCombination = winningCards.size > 0;
   const cards: TableCard[] = [];
   // The engine posts blinds from seats 0 and 1, so mark them the same way the tutorial does.
   const blinds = game.variant.forced === "blinds" || game.variant.forced === "blinds-ante";
@@ -200,7 +206,13 @@ function gameToTable(game: Game): TableState {
           ? { where: "muck" }
           : { where: "seat", seat: player.index, slot },
         faceUp: player.isHero || player.faceUp[slot] || showAll,
-        emphasis: player.folded ? "dim" : "none",
+        emphasis: player.folded
+          ? "dim"
+          : showWinningCombination
+            ? winningCards.has(card.id)
+              ? "play"
+              : "dim"
+            : "none",
       });
     });
   });
@@ -223,7 +235,11 @@ function gameToTable(game: Game): TableState {
       suit: card.suit,
       home: { where: "board", board: 0, slot },
       faceUp: true,
-      emphasis: "none",
+      emphasis: showWinningCombination
+        ? winningCards.has(card.id)
+          ? "play"
+          : "dim"
+        : "none",
     });
   });
 
@@ -446,9 +462,14 @@ export function Practice({ variant }: { variant: Variant }) {
   // Purpose: Makes live play the first and default practice surface whenever the engine supports it.
   // Reason: Learners should land in the simulation immediately; drills remain the safe default for
   //         custom/non-street games that cannot be played against bots.
-  const [mode, setMode] = useState<"drills" | "play">(
-    () => (variant.playable ? "play" : "drills"),
-  );
+  // AI_CHANGE:
+  // Tool: Codex
+  // Model: GPT-5
+  // Timestamp: 2026-07-31T10:15:00-04:00
+  // Purpose: Routes specialized practice modes without changing the established street-game path.
+  // Reason: Dealer qualification and payouts must not leak into Hold'em, Omaha, stud or draw play.
+  const canPlay = variant.playable;
+  const [mode, setMode] = useState<"drills" | "play">(() => (canPlay ? "play" : "drills"));
 
   return (
     <div className="practice">
@@ -456,8 +477,8 @@ export function Practice({ variant }: { variant: Variant }) {
         <button
           aria-selected={mode === "play"}
           onClick={() => setMode("play")}
-          disabled={!variant.playable}
-          style={variant.playable ? undefined : { opacity: 0.4, cursor: "default" }}
+          disabled={!canPlay}
+          style={canPlay ? undefined : { opacity: 0.4, cursor: "default" }}
         >
           Play a hand
         </button>
@@ -468,8 +489,16 @@ export function Practice({ variant }: { variant: Variant }) {
 
       {mode === "drills" ? (
         <Drills variant={variant} />
-      ) : variant.playable ? (
-        <PlayHand key={variant.id} variant={variant} />
+      ) : canPlay ? (
+        variant.practiceMode === "house" ? (
+          <HousePractice key={variant.id} variant={variant} />
+        ) : variant.practiceMode === "ultimate-holdem" ? (
+          <UltimateHoldemPractice key={variant.id} variant={variant} />
+        ) : variant.practiceMode === "let-it-ride" ? (
+          <LetItRidePractice key={variant.id} variant={variant} />
+        ) : (
+          <PlayHand key={variant.id} variant={variant} />
+        )
       ) : (
         <div className="notice">
           {variant.name} has a structure the practice engine does not deal — the drills above still
@@ -477,9 +506,10 @@ export function Practice({ variant }: { variant: Variant }) {
         </div>
       )}
 
-      {!variant.playable && mode === "drills" ? (
+      {!canPlay && mode === "drills" ? (
         <div className="notice">
-          Playable hands against bots are available for the community, stud and draw games.{" "}
+          Playable hands are available for the community, stud and draw games, plus supported
+          dealer games.{" "}
           {variant.name} is taught through its animated walkthrough and these drills.
         </div>
       ) : null}

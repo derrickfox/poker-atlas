@@ -11,7 +11,8 @@ A React web app for learning every kind of poker. Three surfaces:
 1. **Dashboard** — 39 poker variants as cards, with faceted filters and sorting.
 2. **Animated tutorial** — per variant, a real demo hand dealt from a seeded deck and played out
    step by step on an animated table.
-3. **Practice** — per variant, generated drills plus (for 22 of them) a playable hand against bots.
+3. **Practice** — generated drills for every variant, 22 peer-poker games against bots, and isolated
+   dealer-game practice for Three Card Poker and Caribbean Stud.
 
 Location `~/Desktop/REPOS/poker-atlas`. Dev server port **5194**, registered in the *repo-level*
 `~/Desktop/REPOS/.claude/launch.json` as `poker-atlas` (not in the project folder — the preview tool
@@ -19,7 +20,7 @@ reads the launch config from the primary working directory).
 
 ```bash
 npm run dev        # vite, port 5194, strictPort
-npm test           # vitest, 23 tests
+npm test           # vitest, 37 tests
 npm run typecheck  # tsc --noEmit
 npm run build      # tsc --noEmit && vite build
 ```
@@ -45,14 +46,15 @@ app derives:
 - the dashboard card and every filter facet it matches
 - a complete animated tutorial script, including a truthfully-evaluated showdown
 - a set of practice drills
-- a playable hand against bots
+- a playable practice hand when a compatible engine is registered
 
 Adding a variant is appending an object to a data file. Roughly twenty variants differ *only* in
 those numbers, which is why 39 games were feasible instead of four.
 
 The escape hatch: games whose structure cannot be expressed as a list of betting streets (Chinese
 Poker, Guts, the casino house games, the mixed rotations) carry a hand-written `customTutorial`
-array and set `playable: false`. There are 11 of those.
+array. There are 11 of those. They default to `playable: false`, but a specialized practice engine
+can opt one in without sending it through `game.ts`; Three Card Poker and Caribbean Stud do this.
 
 ---
 
@@ -80,14 +82,20 @@ src/
     evaluator.ts                five ranking systems + best-hand search
     tutorial.ts                 deals a demo hand, emits a TutorialStep[] script
     table.ts                    reduces script Actions into TableState
-    game.ts                     the playable engine (deal, bet, draw, settle)
+    game.ts                     the peer-poker engine (deal, bet, draw, settle)
+    house.ts                    isolated dealer qualification, ranking and payout rules
+    letItRide.ts                isolated withdrawals and standard main-wager paytable
+    ultimateHoldem.ts           isolated Play windows, qualification and Blind paytable
     drills.ts                   generates practice questions
-    engine.test.ts              23 tests
+    engine.test.ts              37 tests
 
   components/
     PokerTable.tsx              renders TableState — seats, cards, chips, pot
     TutorialPlayer.tsx          script playback, autoplay, step rail
-    Practice.tsx                drills + live hand (contains gameToTable)
+    Practice.tsx                drills + practice-mode routing (contains gameToTable)
+    HousePractice.tsx           animated dealer-game practice surface
+    LetItRidePractice.tsx       animated two-decision Let It Ride practice surface
+    UltimateHoldemPractice.tsx  animated three-window Ultimate Hold'em practice surface
     Dashboard.tsx               catalog grid + filter rail
     VariantPage.tsx             header, tab strip, reference tab
     ErrorBoundary.tsx           per-tab crash isolation
@@ -129,7 +137,8 @@ are no cycles.
 | `keyIdeas`, `mistakes`, `strategy` | string[] | reference tab + tutorial recap |
 | `origin?` | string | |
 | `showdownCaveat?` | string | appended to generated showdown narration (Badacey/Badeucey only) |
-| `playable` | boolean | true ⇒ `game.ts` can deal it |
+| `playable` | boolean | true ⇒ a practice engine can deal it |
+| `practiceMode?` | `street \| house \| let-it-ride \| ultimate-holdem` | selects the isolated practice rules engine |
 | `customTutorial?` | `TutorialStep[]` | bypasses generation entirely |
 | `quiz?` | `QuizQuestion[]` | hand-written drills layered onto generated ones |
 
@@ -371,7 +380,9 @@ own 0.5–0.8s entrance animation.
 
 ## 9. The practice engine (`src/engine/game.ts`)
 
-Serves the community, stud and draw families — 22 of the 39 variants.
+Serves the community, stud and draw families — 22 of the 39 variants. Specialized casino games do
+not enter this engine: `house.ts` owns the one-decision dealer games, `letItRide.ts` owns two
+withdrawals, and `ultimateHoldem.ts` owns the 4×/3×, 2× and 1× Play windows and Blind paytable.
 
 ```ts
 newGame(variant, seatCount, seed) → Game
@@ -440,8 +451,10 @@ family weight, so the house games and kitchen-table curiosities sit behind the r
 **`VariantPage.tsx`** — three tabs (Animated tutorial / Practice / Reference), each tutorial and
 practice tab wrapped in an `ErrorBoundary` so one bad script can't blank the app.
 
-**`Practice.tsx`** — orders *Play a hand* before *Drills* and selects live play by default for
-playable variants. Custom/non-street games keep the play control disabled and default to drills.
+**`Practice.tsx`** — orders *Play a hand* before *Drills*, selects live play by default for playable
+variants, and routes specialized practice modes to `HousePractice`, `LetItRidePractice` or
+`UltimateHoldemPractice`.
+Unsupported games keep the play control disabled and default to drills.
 
 **`TutorialPlayer.tsx`** — holds only `index` and `playing`. Autoplay uses each step's `hold`
 (4–7s). State is derived, never stored.
@@ -470,22 +483,32 @@ chinese-poker, open-face-chinese
 
 **House (4)** — three-card-poker, ultimate-texas-holdem, caribbean-stud, let-it-ride
 
-22 are `playable`. 11 carry a `customTutorial`: anaconda, guts, indian-poker, chinese-poker,
+26 are `playable`: 22 through the peer-poker engine, Three Card Poker and Caribbean Stud through
+the isolated house engine, Let It Ride through its withdrawal engine, and Ultimate Texas Hold'em
+through its three-window engine. 11 carry a
+`customTutorial`: anaconda, guts, indian-poker, chinese-poker,
 open-face-chinese, horse, eight-game, three-card-poker, ultimate-texas-holdem, caribbean-stud,
 let-it-ride.
 
 ---
 
-## 13. Tests (`src/engine/engine.test.ts`, 23 tests)
+## 13. Tests (`src/engine/engine.test.ts`, 37 tests)
 
 The valuable ones are the sweeps:
 
 - **tutorials** — builds a script for all 39 variants and replays *every step* of each, asserting no
   throw and no duplicate card ids on the table.
 - **drills** — generates for all 39 across 3 seeds, asserting every question has a correct answer.
-- **practice engine** — auto-plays **12 randomized hands of every playable variant** (264 hands),
+- **peer-poker engine** — auto-plays **12 randomized hands of all 22 street-engine variants** (264 hands),
   choosing hero actions at random from the legal set, asserting each terminates in `phase: "done"`
   with a settlement. Plus a no-duplicate-card check.
+- **dealer-game engine** — verifies Three Card Poker's ranking order and queen-high qualification,
+  Caribbean Stud's ace-king qualification and raise ladder, fold/win/push returns, and separate
+  wager → reveal → award animation frames.
+- **Let It Ride engine** — verifies every standard pay tier from a pair of tens through a royal,
+  zero/one/two withdrawals, exact chip returns, both decisions, card reveals and the final award.
+- **Ultimate Texas Hold'em engine** — verifies the Blind ladder, dealer qualification, independent
+  Ante/Blind/Play settlement, 3×/4×, 2× and 1× windows, fold, reveal frames and exact chip motion.
 - **practice animation frames** — verifies a fresh hand separates forced bets, dealing, bot actions
   and the hero handoff; verifies a raise is visible before responses; and verifies collection,
   showdown reveal and award occur as distinct frames.
@@ -539,8 +562,9 @@ catalog edit.
 needs touching: dashboard, filters, tutorial, drills and (if `playable`) the practice table all
 pick it up.
 
-**Add a game that doesn't fit streets** — set `streets: []`, `playable: false`, and write a
-`customTutorial: TutorialStep[]` using the `Action` vocabulary in §6.
+**Add a game that doesn't fit streets** — set `streets: []`, write a `customTutorial:
+TutorialStep[]` using the `Action` vocabulary in §6, and leave `playable: false` unless it has a
+registered isolated `practiceMode` engine.
 
 **Add a ranking system** — add the scorer to `evaluator.ts`, extend `HiRankingId`/`LoRankingId`, and
 wire it into `bestHi`/`bestLo`. Do not add ranking logic anywhere else; `tutorial.ts`, `game.ts` and
