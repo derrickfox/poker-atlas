@@ -159,8 +159,16 @@ export function Dashboard({
             ) : null}
           </div>
 
-          <h3>Search</h3>
+          {/* AI_CHANGE:
+              Tool: Team Workspace (ChatGPT)
+              Model: GPT-6.2-Sol
+              Timestamp: 2026-11-17T21:27:10Z (request prepared)
+              Purpose: Associates the visible Search label with its input
+              Reason: Gives the search field an accessible name and lets clicking the label focus it.
+          */}
+          <h3><label htmlFor="dashboard-search">Search</label></h3>
           <input
+            id="dashboard-search"
             className="search-box"
             placeholder="Omaha, lowball, badugi…"
             value={filters.search}
