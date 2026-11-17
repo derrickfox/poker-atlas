@@ -34,16 +34,38 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   render() {
-    if (this.state.error) {
-      return (
-        <div className="notice">
-          <strong>{this.props.label} could not be rendered.</strong>
-          <div style={{ marginTop: 8, fontFamily: "monospace", fontSize: 12.5 }}>
-            {this.state.error.message}
-          </div>
+    const { error } = this.state;
+    // AI_CHANGE: Tool: ChatGPT via Team Workspace; Model: GPT-6.2-Sol.
+    // Timestamp: 2026-11-17T15:38:38-05:00 (revision request prepared).
+    // Purpose: Announce rendering failures using a persistent alert region.
+    // Reason: Expose errors to assistive technology while preserving the existing visual layout.
+    return (
+      <>
+        <div
+          role="alert"
+          style={{
+            position: "absolute",
+            width: 1,
+            height: 1,
+            padding: 0,
+            margin: -1,
+            overflow: "hidden",
+            clipPath: "inset(50%)",
+            whiteSpace: "nowrap",
+            border: 0,
+          }}
+        >
+          {error ? `${this.props.label} could not be rendered. ${error.message}` : null}
         </div>
-      );
-    }
-    return this.props.children;
+        {error ? (
+          <div className="notice">
+            <strong>{this.props.label} could not be rendered.</strong>
+            <div style={{ marginTop: 8, fontFamily: "monospace", fontSize: 12.5 }}>
+              {error.message}
+            </div>
+          </div>
+        ) : this.props.children}
+      </>
+    );
   }
 }
