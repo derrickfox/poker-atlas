@@ -96,8 +96,10 @@ export function TutorialPlayer({ variant, onPractice }: { variant: Variant; onPr
           <button className="btn" onClick={() => setPlaying((p) => !p)} disabled={atEnd} aria-pressed={playing}>
             Autoplay
           </button>
+          {/* AI_CHANGE Tool: Claude API | Model: Claude Sonnet 5.5 | Timestamp: 2026-11-16T18:59:38-05:00 | Purpose: Disable Restart when the tutorial is already reset. | Reason: Keep Restart available while autoplay is running. */}
           <button
             className="btn"
+            disabled={index === 0 && !playing}
             onClick={() => {
               setIndex(0);
               setPlaying(false);
